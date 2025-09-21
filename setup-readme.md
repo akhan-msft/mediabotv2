@@ -227,21 +227,141 @@ certbot certonly --standalone -d demobot.site
 
 ## 🚀 Step 9: Deploy and Test
 ```powershell
-# On VM - clone and build your bot
-git clone https://github.com/your-repo/mediabot.git
-cd mediabot
-dotnet build
-dotnet run
+# On VM - clone your MediaBot repository
+git clone https://github.com/akhan-msft/mediabotv2.git
+cd mediabotv2
 
-# Test health endpoint
-Invoke-WebRequest -Uri "https://localhost/api/health" -SkipCertificateCheck
+# Restore NuGet packages
+dotnet restore MediaBot.csproj
+
+# Build the MediaBot project
+dotnet build MediaBot.csproj
+
+# Run the bot application (will start on https://0.0.0.0:443)
+dotnet run --project MediaBot.csproj
+
+# In another PowerShell window, test the health endpoint
+Invoke-WebRequest -Uri "https://demobot.site/api/health" -SkipCertificateCheck
+
+# Test the status endpoint for detailed bot information
+Invoke-WebRequest -Uri "https://demobot.site/api/health/status" -SkipCertificateCheck
+
+# Test manual join endpoint (replace with actual Teams meeting URL)
+$body = @{ MeetingUrl = "https://teams.microsoft.com/l/meetup-join/..." } | ConvertTo-Json
+Invoke-WebRequest -Uri "https://demobot.site/api/callback/join" -Method POST -Body $body -ContentType "application/json" -SkipCertificateCheck
 ```
 
 ## ✅ Step 10: Test Bot in Teams
-1. Create a **Teams meeting** (scheduled)
-2. **Add your bot** to the meeting by typing `@mediabot-teams` in the meeting chat
-3. Use **POST** to `https://YOUR-VM-IP/api/callback/join` with meeting URL to trigger join
-4. **Check console logs** for events
+
+### A. Verify Azure Bot Service Endpoint
+1. **Azure Portal** → **MediaBot-RG** → **mediabot-teams** → **Settings** → **Configuration**
+2. **Update messaging endpoint** to: `https://demobot.site/api/callback/incoming` (use domain, not IP)
+3. **Save** configuration
+
+### B. Test Manual Join (Recommended First Test)
+```powershell
+# Create a scheduled Teams meeting and copy the join URL
+$meetingUrl = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_YOUR_MEETING_ID"
+$body = @{ MeetingUrl = $meetingUrl } | ConvertTo-Json
+Invoke-WebRequest -Uri "https://demobot.site/api/callback/join" -Method POST -Body $body -ContentType "application/json" -SkipCertificateCheck
+```
+
+### C. Create Teams App Package (For Full Integration)
+
+#### 1. Create App Icons
+```powershell
+# On your Windows VM, run this script to create icons
+.\create-icons.ps1
+```
+This creates:
+- `outline.png` (32x32) - Simple black outline icon
+- `color.png` (192x192) - Full color icon with "MB" text
+
+#### 2. Create manifest.json
+**Update the `manifest.json` file with YOUR actual Bot App ID:**
+```json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "12345678-1234-1234-1234-123456789012",
+  "developer": {
+    "name": "MediaBot Developer",
+    "websiteUrl": "https://demobot.site",
+    "privacyUrl": "https://demobot.site/privacy",
+    "termsOfUseUrl": "https://demobot.site/terms"
+  },
+  "name": {
+    "short": "MediaBot",
+    "full": "MediaBot Meeting Transcription Bot"
+  },
+  "description": {
+    "short": "A bot that joins Teams meetings and logs events",
+    "full": "MediaBot joins Teams meetings to transcribe and log meeting events including participant changes and audio streams."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#1E88E5",
+  "bots": [
+    {
+      "botId": "12345678-1234-1234-1234-123456789012",
+      "scopes": ["team", "groupchat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "supportsCalling": true,
+      "supportsVideo": false
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["demobot.site"],
+  "webApplicationInfo": {
+    "id": "12345678-1234-1234-1234-123456789012",
+    "resource": "https://RscBasedStoreApp"
+  }
+}
+```
+**⚠️ CRITICAL**: Replace `12345678-1234-1234-1234-123456789012` with your **actual Bot App ID** from Step 1B!
+
+#### 3. Build App Package
+```powershell
+# Automated package builder (recommended)
+.\build-teams-app.ps1
+
+# Manual package creation
+Compress-Archive -Path @("manifest.json", "outline.png", "color.png") -DestinationPath "MediaBot-TeamsApp.zip" -Force
+```
+
+#### 4. Upload to Teams
+1. **Microsoft Teams** → **Apps** → **Manage your apps**
+2. **"Upload an app"** → **"Upload a custom app"**
+3. **Select** `MediaBot-TeamsApp.zip`
+4. **"Add"** to install the bot
+5. **Add bot to a team** or test in direct chat
+
+#### 5. Alternative: Cross-Platform Package Creation
+**Linux/macOS:**
+```bash
+zip -r MediaBot-TeamsApp.zip manifest.json outline.png color.png
+```
+
+**PowerShell (any OS):**
+```powershell
+Compress-Archive -Path @("manifest.json", "outline.png", "color.png") -DestinationPath "MediaBot-TeamsApp.zip" -Force
+```
+
+### D. Test Meeting Integration
+1. **Schedule a Teams meeting** (not instant meeting)
+2. **Add bot** to meeting via app or manual join endpoint
+3. **Join the meeting** yourself and observe bot behavior
+
+### E. Monitor Console Logs
+Watch for color-coded events:
+- **🟢 Green**: Bot initialization and join events
+- **🟡 Yellow**: Participant changes
+- **🔵 Cyan**: Audio stream events
+- **🔴 Red**: Errors or call ended events
 
 ---
 

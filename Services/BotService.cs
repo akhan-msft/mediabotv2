@@ -2,6 +2,7 @@ using Microsoft.Graph.Communications.Client;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using Microsoft.Graph.Authentication;
 using MediaBot.Interfaces;
+using System.Diagnostics;
 
 namespace MediaBot.Services
 {
@@ -14,6 +15,7 @@ namespace MediaBot.Services
         private bool _isInitialized = false;
 
         public bool IsInitialized => _isInitialized;
+        public ICommunicationsClient? CommunicationsClient => _communicationsClient;
 
         public BotService(
             IEventLogger eventLogger, 
@@ -59,8 +61,8 @@ namespace MediaBot.Services
                     }
                 );
 
-                // TODO: Initialize Graph Communications Client
-                // This requires proper authentication setup which we'll implement next
+                // Initialize Graph Communications Client
+                await InitializeCommunicationsClientAsync(appId, appSecret, tenantId, baseUrl);
                 
                 _eventLogger.LogEvent(
                     "BotInitialized",
@@ -76,6 +78,41 @@ namespace MediaBot.Services
                     "BotInitializationFailed",
                     "system",
                     $"Failed to initialize bot: {ex.Message}",
+                    new Dictionary<string, object> { ["Error"] = ex.ToString() }
+                );
+                throw;
+            }
+        }
+
+        private async Task InitializeCommunicationsClientAsync(string appId, string appSecret, string tenantId, string baseUrl)
+        {
+            try
+            {
+                _eventLogger.LogEvent(
+                    "InitializingGraphClient",
+                    "system",
+                    "Initializing Microsoft Graph Communications Client..."
+                );
+
+                // Create the communications client
+                _communicationsClient = new CommunicationsClientBuilder("MediaBot", appId)
+                    .SetNotificationUrl(new Uri($"{baseUrl}/api/callback/notifications"))
+                    .Build();
+
+                _eventLogger.LogEvent(
+                    "GraphClientInitialized",
+                    "system",
+                    "Microsoft Graph Communications Client initialized successfully"
+                );
+
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _eventLogger.LogEvent(
+                    "GraphClientInitializationFailed",
+                    "system",
+                    $"Failed to initialize Graph Communications client: {ex.Message}",
                     new Dictionary<string, object> { ["Error"] = ex.ToString() }
                 );
                 throw;
@@ -106,7 +143,8 @@ namespace MediaBot.Services
                 "Teams Media Bot service is stopping..."
             );
 
-            // TODO: Cleanup communications client and active calls
+            // Cleanup communications client and active calls
+            _communicationsClient?.Dispose();
 
             _eventLogger.LogEvent(
                 "BotStopped",

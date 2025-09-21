@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "3028bcbb-e83a-4578-8b09-a7b3195f84af",
+  "developer": {
+    "name": "MediaBot Developer", 
+    "websiteUrl": "https://demobot.site",
+    "privacyUrl": "https://demobot.site/privacy",
+    "termsOfUseUrl": "https://demobot.site/terms"
+  },
+  "name": {
+    "short": "MediaBot",
+    "full": "MediaBot Meeting Transcription Bot"
+  },
+  "description": {
+    "short": "A bot that joins Teams meetings and logs events",
+    "full": "MediaBot joins Teams meetings to transcribe and log meeting events including participant changes and audio streams. Perfect for meeting analysis and compliance recording."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#1E88E5",
+  "bots": [
+    {
+      "botId": "3028bcbb-e83a-4578-8b09-a7b3195f84af",
+      "scopes": ["team", "groupchat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "supportsCalling": true,
+      "supportsVideo": false
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "demobot.site"
+  ],
+  "webApplicationInfo": {
+    "id": "3028bcbb-e83a-4578-8b09-a7b3195f84af",
+    "resource": "https://RscBasedStoreApp"
+  }
+}

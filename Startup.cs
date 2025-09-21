@@ -21,10 +21,11 @@ namespace MediaBot
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
 
-            // Register bot services
+            // Register bot services with proper dependency injection
             services.AddSingleton<IEventLogger, EventLogger>();
+            services.AddSingleton<BotService>(); // Concrete type for CallHandler access
+            services.AddSingleton<IBotService>(provider => provider.GetService<BotService>()!); // Interface mapping
             services.AddSingleton<ICallHandler, CallHandler>();
-            services.AddSingleton<IBotService, BotService>();
 
             // Add hosted service to start bot
             services.AddHostedService<BotHostedService>();
