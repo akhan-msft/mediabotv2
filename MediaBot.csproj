@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.16.0" />
+    <PackageReference Include="Microsoft.Graph" Version="5.93.0" />
     <PackageReference Include="Microsoft.Graph.Communications.Calls" Version="1.2.0.15235" />
     <PackageReference Include="Microsoft.Graph.Communications.Calls.Media" Version="1.2.0.15235" />
     <PackageReference Include="Microsoft.Graph.Communications.Common" Version="1.2.0.15235" />

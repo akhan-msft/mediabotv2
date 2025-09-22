@@ -3,6 +3,8 @@ using Microsoft.Graph.Communications.Common.Telemetry;
 using Microsoft.Graph.Authentication;
 using MediaBot.Interfaces;
 using System.Diagnostics;
+using Azure.Identity;
+using Microsoft.Graph;
 
 namespace MediaBot.Services
 {
@@ -94,11 +96,12 @@ namespace MediaBot.Services
                     "Initializing Microsoft Graph Communications Client..."
                 );
 
-                // Create the communications client
-                _communicationsClient = new CommunicationsClientBuilder("MediaBot", appId)
+                // Create the communications client - let's start basic and check available methods
+                var builder = new CommunicationsClientBuilder("MediaBot", appId)
                     .SetServiceBaseUrl(new Uri("https://graph.microsoft.com/beta"))
-                    .SetNotificationUrl(new Uri($"{baseUrl}/api/callback/notifications"))
-                    .Build();
+                    .SetNotificationUrl(new Uri($"{baseUrl}/api/callback/notifications"));
+
+                _communicationsClient = builder.Build();
 
                 _eventLogger.LogEvent(
                     "GraphClientInitialized",
