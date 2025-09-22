@@ -96,7 +96,12 @@ namespace MediaBot.Services
                     "Initializing Microsoft Graph Communications Client..."
                 );
 
-                // Create the communications client - let's start basic and check available methods
+                // Set environment variables for authentication
+                Environment.SetEnvironmentVariable("MICROSOFT_APP_ID", appId);
+                Environment.SetEnvironmentVariable("MICROSOFT_APP_SECRET", appSecret);
+                Environment.SetEnvironmentVariable("MICROSOFT_TENANT_ID", tenantId);
+
+                // Create the communications client - it might pick up credentials from environment
                 var builder = new CommunicationsClientBuilder("MediaBot", appId)
                     .SetServiceBaseUrl(new Uri("https://graph.microsoft.com/beta"))
                     .SetNotificationUrl(new Uri($"{baseUrl}/api/callback/notifications"));
