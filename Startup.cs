@@ -25,6 +25,11 @@ namespace MediaBot
             services.AddSingleton<IEventLogger, EventLogger>();
             services.AddSingleton<BotService>(); // Concrete type for CallHandler access
             services.AddSingleton<IBotService>(provider => provider.GetService<BotService>()!); // Interface mapping
+            
+            // Register GraphServiceClient from BotService
+            services.AddSingleton<Microsoft.Graph.GraphServiceClient>(provider => 
+                provider.GetService<BotService>()!.GraphServiceClient!);
+                
             services.AddSingleton<ICallHandler, CallHandler>();
 
             // Add hosted service to start bot

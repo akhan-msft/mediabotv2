@@ -14,10 +14,12 @@ namespace MediaBot.Services
         private readonly ILogger<BotService> _logger;
         private readonly IConfiguration _configuration;
         private ICommunicationsClient? _communicationsClient;
+        private GraphServiceClient? _graphServiceClient;
         private bool _isInitialized = false;
 
         public bool IsInitialized => _isInitialized;
         public ICommunicationsClient? CommunicationsClient => _communicationsClient;
+        public GraphServiceClient? GraphServiceClient => _graphServiceClient;
 
         public BotService(
             IEventLogger eventLogger, 
@@ -65,6 +67,9 @@ namespace MediaBot.Services
 
                 // Initialize Graph Communications Client
                 await InitializeCommunicationsClientAsync(appId, appSecret, tenantId, baseUrl);
+                
+                // Initialize Graph Service Client for v5 SDK
+                await InitializeGraphServiceClientAsync(appId, appSecret, tenantId);
                 
                 _eventLogger.LogEvent(
                     "BotInitialized",
@@ -121,6 +126,42 @@ namespace MediaBot.Services
                     "GraphClientInitializationFailed",
                     "system",
                     $"Failed to initialize Graph Communications client: {ex.Message}",
+                    new Dictionary<string, object> { ["Error"] = ex.ToString() }
+                );
+                throw;
+            }
+        }
+
+        private async Task InitializeGraphServiceClientAsync(string appId, string appSecret, string tenantId)
+        {
+            try
+            {
+                _eventLogger.LogEvent(
+                    "InitializingGraphServiceClient",
+                    "system",
+                    "Initializing Microsoft Graph Service Client v5..."
+                );
+
+                // Create ClientSecretCredential for authentication
+                var credential = new ClientSecretCredential(tenantId, appId, appSecret);
+
+                // Create GraphServiceClient with the credential
+                _graphServiceClient = new GraphServiceClient(credential);
+
+                _eventLogger.LogEvent(
+                    "GraphServiceClientInitialized",
+                    "system",
+                    "Microsoft Graph Service Client v5 initialized successfully"
+                );
+
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _eventLogger.LogEvent(
+                    "GraphServiceClientInitializationFailed",
+                    "system",
+                    $"Failed to initialize Graph Service client: {ex.Message}",
                     new Dictionary<string, object> { ["Error"] = ex.ToString() }
                 );
                 throw;

@@ -1,8 +1,5 @@
-using Microsoft.Graph.Communications.Calls;
-using Microsoft.Graph.Communications.Client;
-using Microsoft.Graph.Communications.Common.Telemetry;
-using Microsoft.Graph.Communications.Resources;
-using Microsoft.Graph.Communications.Calls.Media;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using MediaBot.Interfaces;
 using MediaBot.Models;
 
@@ -13,12 +10,14 @@ namespace MediaBot.Services
         private readonly IEventLogger _eventLogger;
         private readonly ILogger<CallHandler> _logger;
         private readonly BotService _botService;
+        private readonly GraphServiceClient _graphServiceClient;
 
-        public CallHandler(IEventLogger eventLogger, ILogger<CallHandler> logger, IBotService botService)
+        public CallHandler(IEventLogger eventLogger, ILogger<CallHandler> logger, IBotService botService, GraphServiceClient graphServiceClient)
         {
             _eventLogger = eventLogger;
             _logger = logger;
             _botService = (BotService)botService; // Cast to access CommunicationsClient property
+            _graphServiceClient = graphServiceClient;
         }
 
         public async Task HandleIncomingCallAsync(string callId, string meetingId)
@@ -98,10 +97,10 @@ namespace MediaBot.Services
 
         public async Task JoinMeetingAsync(string meetingUrl)
         {
+            var callId = Guid.NewGuid().ToString();
+            
             try
             {
-                var callId = Guid.NewGuid().ToString();
-                
                 _eventLogger.LogEvent(
                     "JoinMeetingRequested",
                     callId,
@@ -109,68 +108,161 @@ namespace MediaBot.Services
                     new Dictionary<string, object> { ["MeetingUrl"] = meetingUrl }
                 );
 
-                // Check if bot service is initialized and has communications client
-                if (_botService?.CommunicationsClient == null)
+                // Check if graph service client is available
+                if (_graphServiceClient == null)
                 {
-                    throw new InvalidOperationException("Bot service not initialized or communications client unavailable");
+                    throw new InvalidOperationException("Graph service client not initialized");
                 }
+
+                // Parse and create the call request
+                var callRequest = CreateJoinMeetingCallRequest(meetingUrl, callId);
 
                 _eventLogger.LogEvent(
                     "GraphSDKJoinAttempt",
                     callId,
-                    "Attempting to join meeting via Microsoft Graph Communications SDK...",
-                    new Dictionary<string, object> { ["MeetingUrl"] = meetingUrl }
-                );
-
-                // For now, let's implement a simpler Graph SDK integration
-                // The full JoinMeetingParameters requires complex setup that we'll implement incrementally
-                
-                _eventLogger.LogEvent(
-                    "GraphSDKInitialized",
-                    callId,
-                    "Graph Communications SDK is available - basic integration ready",
+                    "Creating call via Microsoft Graph SDK...",
                     new Dictionary<string, object> 
                     { 
                         ["MeetingUrl"] = meetingUrl,
-                        ["ClientInitialized"] = _botService.CommunicationsClient != null
+                        ["CallId"] = callId,
+                        ["CallbackUri"] = callRequest.CallbackUri ?? "unknown"
                     }
                 );
 
-                // TODO: Implement full meeting join once we have proper media configuration
-                // For now, this confirms the Graph SDK is connected and ready
-                await Task.CompletedTask;
+                // Create the call using Graph SDK
+                var call = await _graphServiceClient.Communications.Calls.PostAsync(callRequest);
 
-                _eventLogger.LogEvent(
-                    "GraphSDKBasicIntegration",
-                    callId,
-                    "Basic Graph SDK integration completed - ready for full meeting join implementation",
-                    new Dictionary<string, object> 
-                    { 
-                        ["MeetingUrl"] = meetingUrl,
-                        ["NextStep"] = "Implement JoinMeetingParameters with proper media configuration"
-                    }
-                );
+                if (call != null)
+                {
+                    _eventLogger.LogEvent(
+                        "CallCreatedSuccessfully",
+                        callId,
+                        "Successfully created call via Graph SDK",
+                        new Dictionary<string, object> 
+                        { 
+                            ["CallId"] = callId,
+                            ["GraphCallId"] = call.Id ?? "unknown",
+                            ["CallState"] = call.State?.ToString() ?? "unknown",
+                            ["MeetingUrl"] = meetingUrl
+                        }
+                    );
 
-                return;
+                    _eventLogger.LogEvent(
+                        "BotJoinedMeeting",
+                        callId,
+                        "Bot successfully joined Teams meeting",
+                        new Dictionary<string, object> 
+                        { 
+                            ["CallId"] = callId,
+                            ["GraphCallId"] = call.Id ?? "unknown",
+                            ["MeetingUrl"] = meetingUrl,
+                            ["Status"] = "Successfully joined meeting - ready to receive audio streams"
+                        }
+                    );
+                }
+                else
+                {
+                    throw new InvalidOperationException("Graph SDK returned null call object");
+                }
             }
             catch (Exception ex)
             {
                 _eventLogger.LogEvent(
                     CallEventTypes.CallFailed,
-                    "unknown",
+                    callId,
                     $"Failed to join meeting via Graph SDK: {ex.Message}",
                     new Dictionary<string, object> 
                     { 
                         ["Error"] = ex.Message, 
                         ["MeetingUrl"] = meetingUrl,
-                        ["StackTrace"] = ex.StackTrace ?? "No stack trace available"
+                        ["StackTrace"] = ex.StackTrace ?? "No stack trace available",
+                        ["ErrorType"] = ex.GetType().Name
                     }
                 );
                 throw;
             }
         }
 
-        // TODO: SetupCallEventHandlers will be implemented when we have a working ICall instance
-        // This will handle real-time call state changes, participant events, and media streams
+        private Call CreateJoinMeetingCallRequest(string meetingUrl, string callId)
+        {
+            try
+            {
+                _eventLogger.LogEvent(
+                    "CreatingCallRequest",
+                    callId,
+                    "Creating Call request for Graph SDK",
+                    new Dictionary<string, object> { ["MeetingUrl"] = meetingUrl }
+                );
+
+                // Parse the Teams meeting URL to extract meeting information
+                var meetingInfo = ParseMeetingUrl(meetingUrl);
+
+                // Create the call request body according to Graph API documentation
+                var callRequest = new Call
+                {
+                    OdataType = "#microsoft.graph.call",
+                    CallbackUri = "https://demobot.site/api/callback",
+                    RequestedModalities = new List<Modality?> { Modality.Audio },
+                    MediaConfig = new ServiceHostedMediaConfig
+                    {
+                        OdataType = "#microsoft.graph.serviceHostedMediaConfig"
+                    },
+                    MeetingInfo = meetingInfo
+                };
+
+                _eventLogger.LogEvent(
+                    "CallRequestCreated",
+                    callId,
+                    "Successfully created Call request",
+                    new Dictionary<string, object> 
+                    { 
+                        ["MeetingUrl"] = meetingUrl,
+                        ["CallbackUri"] = callRequest.CallbackUri,
+                        ["MediaConfigured"] = true
+                    }
+                );
+
+                return callRequest;
+            }
+            catch (Exception ex)
+            {
+                _eventLogger.LogEvent(
+                    "CallRequestCreationFailed",
+                    callId,
+                    $"Failed to create Call request: {ex.Message}",
+                    new Dictionary<string, object> 
+                    { 
+                        ["Error"] = ex.Message,
+                        ["MeetingUrl"] = meetingUrl
+                    }
+                );
+                throw;
+            }
+        }
+
+        private JoinMeetingIdMeetingInfo ParseMeetingUrl(string meetingUrl)
+        {
+            // For Teams meeting URLs like: https://teams.microsoft.com/meet/2908149825997?p=F2PgBXX0Gidzyxb0H2
+            // We need to extract the meeting ID and create appropriate MeetingInfo
+
+            var uri = new Uri(meetingUrl);
+            
+            // Extract meeting ID from the path (e.g., "2908149825997" from "/meet/2908149825997")
+            var pathSegments = uri.LocalPath.Trim('/').Split('/');
+            var meetingId = pathSegments.Length > 1 ? pathSegments[1] : pathSegments[0];
+
+            // Create JoinMeetingIdMeetingInfo for Teams meetings
+            var meetingInfo = new JoinMeetingIdMeetingInfo
+            {
+                OdataType = "#microsoft.graph.joinMeetingIdMeetingInfo",
+                JoinMeetingId = meetingId,
+                Passcode = null // Optional, can be extracted from URL if needed
+            };
+
+            return meetingInfo;
+        }
+
+        // Note: Graph SDK v5 handles call events through webhook notifications
+        // Real-time event handling will be implemented via the webhook callback endpoint
     }
 }
