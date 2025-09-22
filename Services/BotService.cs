@@ -96,6 +96,7 @@ namespace MediaBot.Services
 
                 // Create the communications client
                 _communicationsClient = new CommunicationsClientBuilder("MediaBot", appId)
+                    .SetServiceBaseUrl(new Uri("https://graph.microsoft.com/beta"))
                     .SetNotificationUrl(new Uri($"{baseUrl}/api/callback/notifications"))
                     .Build();
 
