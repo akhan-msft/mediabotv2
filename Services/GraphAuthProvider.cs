@@ -15,7 +15,7 @@ namespace MediaBot.Services
             _clientApp = ConfidentialClientApplicationBuilder
                 .Create(clientId)
                 .WithClientSecret(clientSecret)
-                .WithAuthority($"https://login.microsoftonline.com/{tenantId}")
+                .WithAuthority("https://login.microsoftonline.com/common") // Multi-tenant endpoint
                 .Build();
         }
 

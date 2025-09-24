@@ -142,8 +142,12 @@ namespace MediaBot.Services
                     "Initializing Microsoft Graph Service Client v5..."
                 );
 
-                // Create ClientSecretCredential for authentication
-                var credential = new ClientSecretCredential(tenantId, appId, appSecret);
+                // Create ClientSecretCredential for multi-tenant authentication
+                var options = new ClientSecretCredentialOptions
+                {
+                    AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
+                };
+                var credential = new ClientSecretCredential("common", appId, appSecret, options);
 
                 // Create GraphServiceClient with the credential
                 _graphServiceClient = new GraphServiceClient(credential);
