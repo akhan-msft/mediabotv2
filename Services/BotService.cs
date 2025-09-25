@@ -136,29 +136,23 @@ namespace MediaBot.Services
         {
             try
             {
-                _eventLogger.LogEvent(
-                    "InitializingGraphServiceClient",
-                    "system",
-                    "Initializing Microsoft Graph Service Client v5..."
-                );
-
-                // Use the actual tenant ID instead of "common"
                 var options = new ClientSecretCredentialOptions
                 {
-                    AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
+                    AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
+                    AdditionallyAllowedTenants = { tenantId }
                 };
-                var credential = new ClientSecretCredential(tenantId, appId, appSecret, options); // Changed from "common" to tenantId
 
-                // Create GraphServiceClient with the credential
-                _graphServiceClient = new GraphServiceClient(credential);
-
+                var credential = new ClientSecretCredential(tenantId, appId, appSecret, options);
+                
+                var authProvider = new AzureIdentityAuthenticationProvider(credential, isCaeEnabled: true);
+                
+                _graphServiceClient = new GraphServiceClient(authProvider, "https://graph.microsoft.com/beta");
+                
                 _eventLogger.LogEvent(
                     "GraphServiceClientInitialized",
                     "system",
-                    "Microsoft Graph Service Client v5 initialized successfully"
+                    "Microsoft Graph Service Client (v5) initialized successfully with beta endpoint"
                 );
-
-                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
