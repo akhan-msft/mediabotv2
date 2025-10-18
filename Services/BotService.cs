@@ -8,6 +8,11 @@ using Microsoft.Graph;
 
 namespace MediaBot.Services
 {
+    /// <summary>
+    /// Core service that manages the Teams Media Bot lifecycle and Microsoft Graph client initialization.
+    /// This service initializes both the Graph Communications Client (for real-time media) and the Graph Service Client (v5 SDK).
+    /// It handles authentication, configuration validation, and provides access to the initialized clients for call operations.
+    /// </summary>
     public class BotService : IBotService
     {
         private readonly IEventLogger _eventLogger;

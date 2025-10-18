@@ -5,6 +5,11 @@ using System.Net.Http.Headers;
 
 namespace MediaBot.Services
 {
+    /// <summary>
+    /// Authentication provider for Microsoft Graph Communications API requests.
+    /// Implements OAuth 2.0 client credentials flow using Azure AD to acquire access tokens
+    /// for authenticating outbound Graph API calls from the Media Bot.
+    /// </summary>
     public class GraphAuthProvider : IRequestAuthenticationProvider
     {
         private readonly IConfidentialClientApplication _clientApp;

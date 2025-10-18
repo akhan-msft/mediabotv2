@@ -4,6 +4,11 @@ using MediaBot.Models;
 
 namespace MediaBot.Controllers
 {
+    /// <summary>
+    /// REST API controller that handles callback notifications from Microsoft Teams and Graph API.
+    /// This controller processes incoming call invitations, Graph API notifications for call state changes,
+    /// and provides endpoints for manually joining Teams meetings.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class CallbackController : ControllerBase
