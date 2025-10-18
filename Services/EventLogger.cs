@@ -3,6 +3,11 @@ using MediaBot.Models;
 
 namespace MediaBot.Services
 {
+    /// <summary>
+    /// Provides event logging functionality with color-coded console output for different event types.
+    /// Logs bot lifecycle events, call events, participant changes, and media stream activities
+    /// with structured formatting and timestamps for debugging and monitoring.
+    /// </summary>
     public class EventLogger : IEventLogger
     {
         private readonly ILogger<EventLogger> _logger;

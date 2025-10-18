@@ -5,6 +5,11 @@ using MediaBot.Models;
 
 namespace MediaBot.Services
 {
+    /// <summary>
+    /// Handles all call-related operations for the Teams Media Bot including joining meetings, 
+    /// managing call lifecycle events, and processing participant and audio stream changes.
+    /// This class acts as the primary interface for bot interaction with Teams calls and meetings.
+    /// </summary>
     public class CallHandler : ICallHandler
     {
         private readonly IEventLogger _eventLogger;
